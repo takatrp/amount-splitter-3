@@ -47,7 +47,7 @@ if (html.includes("name=\"remainderTarget\"")) {
   throw new Error("Remainder target radio controls should not be present.");
 }
 
-if (!html.includes("按分基準（小数点3位まで）")) {
+if (!html.includes("按分基準（小数点4位まで）")) {
   throw new Error("Basis input label is missing.");
 }
 

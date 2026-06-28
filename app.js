@@ -2,9 +2,9 @@
   "use strict";
 
   const PART_COUNT = 3;
-  const BASIS_SCALE = 1000n;
+  const BASIS_SCALE = 10000n;
   const ZERO_AMOUNTS = [0n, 0n, 0n];
-  const DEFAULT_BASES = [100n, 100n, 100n];
+  const DEFAULT_BASES = [10000n, 10000n, 10000n];
 
   function parseAmount(rawValue) {
     const trimmed = String(rawValue || "").trim();
@@ -27,13 +27,13 @@
     }
 
     const normalized = trimmed.replace(/[,\s]/g, "");
-    if (normalized === "." || !/^\d*(?:\.\d{0,3})?$/.test(normalized) || !/\d/.test(normalized)) {
+    if (normalized === "." || !/^\d*(?:\.\d{0,4})?$/.test(normalized) || !/\d/.test(normalized)) {
       return { ok: false, value: 0n };
     }
 
     const parts = normalized.split(".");
     const whole = parts[0] || "0";
-    const decimal = (parts[1] || "").padEnd(3, "0").slice(0, 3);
+    const decimal = (parts[1] || "").padEnd(4, "0").slice(0, 4);
 
     return {
       ok: true,
@@ -55,7 +55,7 @@
   function formatBasisDisplay(value) {
     const scaled = BigInt(value);
     const whole = scaled / BASIS_SCALE;
-    const decimal = (scaled % BASIS_SCALE).toString().padStart(3, "0");
+    const decimal = (scaled % BASIS_SCALE).toString().padStart(4, "0");
     return `${formatAmount(whole)}.${decimal}`;
   }
 
@@ -66,7 +66,7 @@
     const integerSource = hasDot ? text.slice(0, dotIndex) : text;
     const decimalSource = hasDot ? text.slice(dotIndex + 1) : "";
     const integerDigits = integerSource.replace(/[^\d]/g, "");
-    const decimalDigits = decimalSource.replace(/[^\d]/g, "").slice(0, 3);
+    const decimalDigits = decimalSource.replace(/[^\d]/g, "").slice(0, 4);
     let formattedInteger = integerDigits === "" ? "" : formatAmount(BigInt(integerDigits));
 
     if (hasDot) {
@@ -237,7 +237,7 @@
       }
 
       if (!parsedBases.ok) {
-        basisErrorText.textContent = "按分基準は小数点3位までの0以上の数値で入力してください。";
+        basisErrorText.textContent = "按分基準は小数点4位までの0以上の数値で入力してください。";
       } else if (basisTotal === 0n) {
         basisErrorText.textContent = "按分基準を1つ以上入力してください。";
       } else {
