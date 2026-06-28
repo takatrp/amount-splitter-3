@@ -11,7 +11,7 @@ const linkedIds = [
   "basis-error",
   "summary-total",
   "summary-basis",
-  "summary-remainder",
+  "summary-adjustment",
   "copy-status"
 ];
 
@@ -43,12 +43,16 @@ if (!js.includes("`basis-${index}`")) {
   throw new Error("Basis input lookup is not wired in JavaScript.");
 }
 
-if (!html.includes("name=\"remainderTarget\"")) {
-  throw new Error("Remainder target radio controls are missing.");
+if (html.includes("name=\"remainderTarget\"")) {
+  throw new Error("Remainder target radio controls should not be present.");
 }
 
-if (!html.includes("按分基準（小数点2位まで）")) {
+if (!html.includes("按分基準（小数点3位まで）")) {
   throw new Error("Basis input label is missing.");
+}
+
+if (!html.includes("3番目調整")) {
+  throw new Error("Third difference adjustment summary is missing.");
 }
 
 if ((html.match(/data-copy-index=/g) || []).length !== 3) {

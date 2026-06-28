@@ -2,7 +2,7 @@
   "use strict";
 
   const PART_COUNT = 3;
-  const BASIS_SCALE = 100n;
+  const BASIS_SCALE = 1000n;
   const ZERO_AMOUNTS = [0n, 0n, 0n];
   const DEFAULT_BASES = [100n, 100n, 100n];
 
@@ -27,13 +27,13 @@
     }
 
     const normalized = trimmed.replace(/[,\s]/g, "");
-    if (normalized === "." || !/^\d*(?:\.\d{0,2})?$/.test(normalized) || !/\d/.test(normalized)) {
+    if (normalized === "." || !/^\d*(?:\.\d{0,3})?$/.test(normalized) || !/\d/.test(normalized)) {
       return { ok: false, value: 0n };
     }
 
     const parts = normalized.split(".");
     const whole = parts[0] || "0";
-    const decimal = (parts[1] || "").padEnd(2, "0").slice(0, 2);
+    const decimal = (parts[1] || "").padEnd(3, "0").slice(0, 3);
 
     return {
       ok: true,
@@ -55,7 +55,7 @@
   function formatBasisDisplay(value) {
     const scaled = BigInt(value);
     const whole = scaled / BASIS_SCALE;
-    const decimal = (scaled % BASIS_SCALE).toString().padStart(2, "0");
+    const decimal = (scaled % BASIS_SCALE).toString().padStart(3, "0");
     return `${formatAmount(whole)}.${decimal}`;
   }
 
@@ -66,7 +66,7 @@
     const integerSource = hasDot ? text.slice(0, dotIndex) : text;
     const decimalSource = hasDot ? text.slice(dotIndex + 1) : "";
     const integerDigits = integerSource.replace(/[^\d]/g, "");
-    const decimalDigits = decimalSource.replace(/[^\d]/g, "").slice(0, 2);
+    const decimalDigits = decimalSource.replace(/[^\d]/g, "").slice(0, 3);
     let formattedInteger = integerDigits === "" ? "" : formatAmount(BigInt(integerDigits));
 
     if (hasDot) {
@@ -75,11 +75,6 @@
     }
 
     return formattedInteger;
-  }
-
-  function getSafeTargetIndex(remainderTarget) {
-    const target = Number(remainderTarget);
-    return Number.isInteger(target) && target >= 0 && target < PART_COUNT ? target : 0;
   }
 
   function normalizeBasisValues(basisValues) {
@@ -98,6 +93,10 @@
     return values.reduce((sum, value) => sum + value, 0n);
   }
 
+  function roundDivision(numerator, denominator) {
+    return (numerator * 2n + denominator) / (denominator * 2n);
+  }
+
   function calculateBaseParts(totalAmount, basisValues) {
     const total = BigInt(totalAmount);
     const bases = normalizeBasisValues(basisValues);
@@ -106,29 +105,28 @@
     if (basisTotal === 0n) {
       return {
         parts: ZERO_AMOUNTS.slice(),
-        remainder: 0n,
+        adjustment: 0n,
         basisTotal
       };
     }
 
-    const parts = bases.map((basis) => {
-      return basis === 0n ? 0n : (total * basis) / basisTotal;
-    });
-    const allocated = sumValues(parts);
+    const first = roundDivision(total * bases[0], basisTotal);
+    const second = roundDivision(total * bases[1], basisTotal);
+    const third = total - first - second;
+    const parts = [first, second, third];
+    const roundedThird = roundDivision(total * bases[2], basisTotal);
 
     return {
       parts,
-      remainder: total - allocated,
+      adjustment: third - roundedThird,
       basisTotal
     };
   }
 
-  function splitAmount(totalAmount, basisValues, remainderTarget) {
+  function splitAmount(totalAmount, basisValues) {
     let bases = basisValues;
-    let target = remainderTarget;
 
     if (!Array.isArray(bases)) {
-      target = bases;
       bases = DEFAULT_BASES;
     }
 
@@ -137,14 +135,11 @@
       return ZERO_AMOUNTS.slice();
     }
 
-    const safeTarget = getSafeTargetIndex(target);
-    return calculated.parts.map((amount, index) => {
-      return amount + (index === safeTarget ? calculated.remainder : 0n);
-    });
+    return calculated.parts;
   }
 
-  function getRemainder(totalAmount, basisValues) {
-    return calculateBaseParts(totalAmount, basisValues).remainder;
+  function getAdjustment(totalAmount, basisValues) {
+    return calculateBaseParts(totalAmount, basisValues).adjustment;
   }
 
   function getBasisTotal(basisValues) {
@@ -211,18 +206,12 @@
     const basisErrorText = documentRef.getElementById("basis-error");
     const resultOutputs = [0, 1, 2].map((index) => documentRef.getElementById(`result-${index}`));
     const copyButtons = Array.from(documentRef.querySelectorAll("[data-copy-index]"));
-    const targetInputs = Array.from(documentRef.querySelectorAll("input[name='remainderTarget']"));
     const splitBars = Array.from(documentRef.querySelectorAll("[data-bar-index]"));
     const summaryTotal = documentRef.getElementById("summary-total");
     const summaryBasis = documentRef.getElementById("summary-basis");
-    const summaryRemainder = documentRef.getElementById("summary-remainder");
+    const summaryAdjustment = documentRef.getElementById("summary-adjustment");
     const copyStatus = documentRef.getElementById("copy-status");
     let currentAmounts = ZERO_AMOUNTS;
-
-    function getTargetIndex() {
-      const selected = targetInputs.find((input) => input.checked);
-      return selected ? Number(selected.value) : 0;
-    }
 
     function getParsedBases() {
       const parsedBases = basisInputs.map((input) => parseBasis(input.value));
@@ -240,7 +229,6 @@
       const parsedAmount = parseAmount(amountInput.value);
       const parsedBases = getParsedBases();
       const basisTotal = parsedBases.ok ? getBasisTotal(parsedBases.values) : 0n;
-      const targetIndex = getTargetIndex();
 
       if (!parsedAmount.ok) {
         errorText.textContent = "金額は0以上の整数で入力してください。";
@@ -249,7 +237,7 @@
       }
 
       if (!parsedBases.ok) {
-        basisErrorText.textContent = "按分基準は小数点2位までの0以上の数値で入力してください。";
+        basisErrorText.textContent = "按分基準は小数点3位までの0以上の数値で入力してください。";
       } else if (basisTotal === 0n) {
         basisErrorText.textContent = "按分基準を1つ以上入力してください。";
       } else {
@@ -257,7 +245,7 @@
       }
 
       if (parsedAmount.ok && parsedBases.ok && basisTotal > 0n) {
-        currentAmounts = splitAmount(parsedAmount.value, parsedBases.values, targetIndex);
+        currentAmounts = splitAmount(parsedAmount.value, parsedBases.values);
       } else {
         currentAmounts = ZERO_AMOUNTS;
       }
@@ -267,15 +255,15 @@
       });
 
       splitBars.forEach((bar, index) => {
-        bar.classList.toggle("is-remainder-target", index === targetIndex);
+        bar.classList.toggle("is-remainder-target", index === 2);
       });
 
       const validTotal = parsedAmount.ok ? parsedAmount.value : 0n;
       summaryTotal.textContent = formatAmount(validTotal);
       summaryBasis.textContent = formatBasisDisplay(basisTotal);
-      summaryRemainder.textContent =
+      summaryAdjustment.textContent =
         parsedAmount.ok && parsedBases.ok && basisTotal > 0n
-          ? formatAmount(getRemainder(validTotal, parsedBases.values))
+          ? formatAmount(getAdjustment(validTotal, parsedBases.values))
           : "0";
       setCopyStatus("");
     }
@@ -290,10 +278,6 @@
         input.value = formatBasisInput(input.value);
         render();
       });
-    });
-
-    targetInputs.forEach((input) => {
-      input.addEventListener("change", render);
     });
 
     copyButtons.forEach((button) => {
@@ -324,7 +308,7 @@
     formatBasisDisplay,
     formatBasisInput,
     splitAmount,
-    getRemainder,
+    getAdjustment,
     getBasisTotal
   };
 

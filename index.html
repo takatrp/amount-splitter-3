@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>3分割按分計算ツール</title>
-    <link rel="stylesheet" href="styles.css?v=1.1">
-    <script src="app.js?v=1.1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.2">
+    <script src="app.js?v=1.2" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -15,7 +15,7 @@
             <p class="eyebrow">金額按分</p>
             <h1 id="app-title">3分割按分計算ツール</h1>
           </div>
-          <p class="revision">v1.1</p>
+          <p class="revision">v1.2</p>
         </div>
 
         <div class="input-row">
@@ -35,40 +35,22 @@
         </div>
 
         <fieldset class="basis-field">
-          <legend>按分基準（小数点2位まで）</legend>
+          <legend>按分基準（小数点3位まで）</legend>
           <div class="basis-grid">
             <label class="basis-item" for="basis-0">
               <span>1番目</span>
-              <input id="basis-0" type="text" inputmode="decimal" autocomplete="off" value="1.00" aria-describedby="basis-error">
+              <input id="basis-0" type="text" inputmode="decimal" autocomplete="off" value="1.000" aria-describedby="basis-error">
             </label>
             <label class="basis-item" for="basis-1">
               <span>2番目</span>
-              <input id="basis-1" type="text" inputmode="decimal" autocomplete="off" value="1.00" aria-describedby="basis-error">
+              <input id="basis-1" type="text" inputmode="decimal" autocomplete="off" value="1.000" aria-describedby="basis-error">
             </label>
             <label class="basis-item" for="basis-2">
               <span>3番目</span>
-              <input id="basis-2" type="text" inputmode="decimal" autocomplete="off" value="1.00" aria-describedby="basis-error">
+              <input id="basis-2" type="text" inputmode="decimal" autocomplete="off" value="1.000" aria-describedby="basis-error">
             </label>
           </div>
           <p id="basis-error" class="error-text" role="alert"></p>
-        </fieldset>
-
-        <fieldset class="remainder-field">
-          <legend>端数の集約先</legend>
-          <div class="segment-control" role="radiogroup" aria-label="端数の集約先">
-            <label>
-              <input type="radio" name="remainderTarget" value="0" checked>
-              <span>1番目</span>
-            </label>
-            <label>
-              <input type="radio" name="remainderTarget" value="1">
-              <span>2番目</span>
-            </label>
-            <label>
-              <input type="radio" name="remainderTarget" value="2">
-              <span>3番目</span>
-            </label>
-          </div>
         </fieldset>
 
         <div class="split-visual" aria-hidden="true">
@@ -103,8 +85,8 @@
 
         <div class="summary-row">
           <p>合計 <strong id="summary-total">0</strong> 円</p>
-          <p>基準合計 <strong id="summary-basis">3.00</strong></p>
-          <p>端数 <strong id="summary-remainder">0</strong> 円</p>
+          <p>基準合計 <strong id="summary-basis">3.000</strong></p>
+          <p>3番目調整 <strong id="summary-adjustment">0</strong> 円</p>
         </div>
 
         <p id="copy-status" class="copy-status" aria-live="polite"></p>
