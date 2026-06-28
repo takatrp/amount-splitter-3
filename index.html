@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>3分割按分計算ツール</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="tool-surface" aria-labelledby="app-title">
+        <div class="heading-row">
+          <div>
+            <p class="eyebrow">金額按分</p>
+            <h1 id="app-title">3分割按分計算ツール</h1>
+          </div>
+          <p class="revision">v1.0</p>
+        </div>
+
+        <div class="input-row">
+          <label class="field-label" for="total-amount">合計金額</label>
+          <div class="amount-input-wrap">
+            <span aria-hidden="true">¥</span>
+            <input
+              id="total-amount"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="100000"
+              aria-describedby="amount-error"
+            >
+          </div>
+          <p id="amount-error" class="error-text" role="alert"></p>
+        </div>
+
+        <fieldset class="remainder-field">
+          <legend>端数の集約先</legend>
+          <div class="segment-control" role="radiogroup" aria-label="端数の集約先">
+            <label>
+              <input type="radio" name="remainderTarget" value="0" checked>
+              <span>1番目</span>
+            </label>
+            <label>
+              <input type="radio" name="remainderTarget" value="1">
+              <span>2番目</span>
+            </label>
+            <label>
+              <input type="radio" name="remainderTarget" value="2">
+              <span>3番目</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="split-visual" aria-hidden="true">
+          <div class="split-bar" data-bar-index="0"></div>
+          <div class="split-bar" data-bar-index="1"></div>
+          <div class="split-bar" data-bar-index="2"></div>
+        </div>
+
+        <div class="result-list" aria-label="按分結果">
+          <section class="result-item">
+            <div>
+              <p class="result-label">1番目</p>
+              <output id="result-0" for="total-amount">0</output>
+            </div>
+            <button type="button" class="copy-button" data-copy-index="0">コピー</button>
+          </section>
+          <section class="result-item">
+            <div>
+              <p class="result-label">2番目</p>
+              <output id="result-1" for="total-amount">0</output>
+            </div>
+            <button type="button" class="copy-button" data-copy-index="1">コピー</button>
+          </section>
+          <section class="result-item">
+            <div>
+              <p class="result-label">3番目</p>
+              <output id="result-2" for="total-amount">0</output>
+            </div>
+            <button type="button" class="copy-button" data-copy-index="2">コピー</button>
+          </section>
+        </div>
+
+        <div class="summary-row">
+          <p>合計 <strong id="summary-total">0</strong> 円</p>
+          <p>端数 <strong id="summary-remainder">0</strong> 円</p>
+        </div>
+
+        <p id="copy-status" class="copy-status" aria-live="polite"></p>
+      </section>
+    </main>
+  </body>
+</html>
