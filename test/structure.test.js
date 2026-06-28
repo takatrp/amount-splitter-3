@@ -8,7 +8,9 @@ const js = fs.readFileSync("app.js", "utf8");
 const linkedIds = [
   "total-amount",
   "amount-error",
+  "basis-error",
   "summary-total",
+  "summary-basis",
   "summary-remainder",
   "copy-status"
 ];
@@ -27,12 +29,26 @@ if (missingIds.length > 0) {
   }
 });
 
+["basis-0", "basis-1", "basis-2"].forEach((id) => {
+  if (!html.includes(`id="${id}"`)) {
+    throw new Error(`Basis input is missing: ${id}`);
+  }
+});
+
 if (!js.includes("`result-${index}`")) {
   throw new Error("Result output lookup is not wired in JavaScript.");
 }
 
+if (!js.includes("`basis-${index}`")) {
+  throw new Error("Basis input lookup is not wired in JavaScript.");
+}
+
 if (!html.includes("name=\"remainderTarget\"")) {
   throw new Error("Remainder target radio controls are missing.");
+}
+
+if (!html.includes("按分基準（小数点2位まで）")) {
+  throw new Error("Basis input label is missing.");
 }
 
 if ((html.match(/data-copy-index=/g) || []).length !== 3) {

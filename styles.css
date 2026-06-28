@@ -91,6 +91,7 @@ h1 {
 }
 
 .field-label,
+.basis-field legend,
 .remainder-field legend {
   display: block;
   margin-bottom: 10px;
@@ -144,6 +145,50 @@ h1 {
   margin: 8px 0 0;
   color: var(--danger);
   font-size: 0.9rem;
+}
+
+.basis-field {
+  margin: 22px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.basis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.basis-item {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.basis-item span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.basis-item input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  background: #fbfcfb;
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.basis-item input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(45, 117, 106, 0.12);
 }
 
 .remainder-field {
@@ -321,6 +366,7 @@ output {
     font-size: 1.6rem;
   }
 
+  .basis-grid,
   .segment-control,
   .result-list {
     grid-template-columns: 1fr;

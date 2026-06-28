@@ -15,7 +15,7 @@
             <p class="eyebrow">金額按分</p>
             <h1 id="app-title">3分割按分計算ツール</h1>
           </div>
-          <p class="revision">v1.0</p>
+          <p class="revision">v1.1</p>
         </div>
 
         <div class="input-row">
@@ -27,12 +27,31 @@
               type="text"
               inputmode="numeric"
               autocomplete="off"
-              placeholder="100000"
+              placeholder="100,000"
               aria-describedby="amount-error"
             >
           </div>
           <p id="amount-error" class="error-text" role="alert"></p>
         </div>
+
+        <fieldset class="basis-field">
+          <legend>按分基準（小数点2位まで）</legend>
+          <div class="basis-grid">
+            <label class="basis-item" for="basis-0">
+              <span>1番目</span>
+              <input id="basis-0" type="text" inputmode="decimal" autocomplete="off" value="1.00" aria-describedby="basis-error">
+            </label>
+            <label class="basis-item" for="basis-1">
+              <span>2番目</span>
+              <input id="basis-1" type="text" inputmode="decimal" autocomplete="off" value="1.00" aria-describedby="basis-error">
+            </label>
+            <label class="basis-item" for="basis-2">
+              <span>3番目</span>
+              <input id="basis-2" type="text" inputmode="decimal" autocomplete="off" value="1.00" aria-describedby="basis-error">
+            </label>
+          </div>
+          <p id="basis-error" class="error-text" role="alert"></p>
+        </fieldset>
 
         <fieldset class="remainder-field">
           <legend>端数の集約先</legend>
@@ -62,21 +81,21 @@
           <section class="result-item">
             <div>
               <p class="result-label">1番目</p>
-              <output id="result-0" for="total-amount">0</output>
+              <output id="result-0" for="total-amount basis-0">0</output>
             </div>
             <button type="button" class="copy-button" data-copy-index="0">コピー</button>
           </section>
           <section class="result-item">
             <div>
               <p class="result-label">2番目</p>
-              <output id="result-1" for="total-amount">0</output>
+              <output id="result-1" for="total-amount basis-1">0</output>
             </div>
             <button type="button" class="copy-button" data-copy-index="1">コピー</button>
           </section>
           <section class="result-item">
             <div>
               <p class="result-label">3番目</p>
-              <output id="result-2" for="total-amount">0</output>
+              <output id="result-2" for="total-amount basis-2">0</output>
             </div>
             <button type="button" class="copy-button" data-copy-index="2">コピー</button>
           </section>
@@ -84,6 +103,7 @@
 
         <div class="summary-row">
           <p>合計 <strong id="summary-total">0</strong> 円</p>
+          <p>基準合計 <strong id="summary-basis">3.00</strong></p>
           <p>端数 <strong id="summary-remainder">0</strong> 円</p>
         </div>
 

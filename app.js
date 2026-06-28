@@ -1,8 +1,10 @@
 (function attachAmountSplitter(global) {
   "use strict";
 
-  const PART_COUNT = 3n;
+  const PART_COUNT = 3;
+  const BASIS_SCALE = 100n;
   const ZERO_AMOUNTS = [0n, 0n, 0n];
+  const DEFAULT_BASES = [100n, 100n, 100n];
 
   function parseAmount(rawValue) {
     const trimmed = String(rawValue || "").trim();
@@ -18,26 +20,135 @@
     return { ok: true, value: BigInt(normalized) };
   }
 
+  function parseBasis(rawValue) {
+    const trimmed = String(rawValue || "").trim();
+    if (trimmed === "") {
+      return { ok: true, value: 0n };
+    }
+
+    const normalized = trimmed.replace(/[,\s]/g, "");
+    if (normalized === "." || !/^\d*(?:\.\d{0,2})?$/.test(normalized) || !/\d/.test(normalized)) {
+      return { ok: false, value: 0n };
+    }
+
+    const parts = normalized.split(".");
+    const whole = parts[0] || "0";
+    const decimal = (parts[1] || "").padEnd(2, "0").slice(0, 2);
+
+    return {
+      ok: true,
+      value: BigInt(whole) * BASIS_SCALE + BigInt(decimal)
+    };
+  }
+
   function formatAmount(value) {
     return BigInt(value)
       .toString()
       .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
-  function splitAmount(totalAmount, remainderTarget) {
-    const target = Number(remainderTarget);
-    const safeTarget = target >= 0 && target < 3 ? target : 0;
-    const total = BigInt(totalAmount);
-    const base = total / PART_COUNT;
-    const remainder = total % PART_COUNT;
+  function formatAmountInput(rawValue) {
+    const digits = String(rawValue || "").replace(/[^\d]/g, "");
+    return digits === "" ? "" : formatAmount(BigInt(digits));
+  }
 
-    return ZERO_AMOUNTS.map((_, index) => {
-      return base + (index === safeTarget ? remainder : 0n);
+  function formatBasisDisplay(value) {
+    const scaled = BigInt(value);
+    const whole = scaled / BASIS_SCALE;
+    const decimal = (scaled % BASIS_SCALE).toString().padStart(2, "0");
+    return `${formatAmount(whole)}.${decimal}`;
+  }
+
+  function formatBasisInput(rawValue) {
+    const text = String(rawValue || "");
+    const dotIndex = text.indexOf(".");
+    const hasDot = dotIndex !== -1;
+    const integerSource = hasDot ? text.slice(0, dotIndex) : text;
+    const decimalSource = hasDot ? text.slice(dotIndex + 1) : "";
+    const integerDigits = integerSource.replace(/[^\d]/g, "");
+    const decimalDigits = decimalSource.replace(/[^\d]/g, "").slice(0, 2);
+    let formattedInteger = integerDigits === "" ? "" : formatAmount(BigInt(integerDigits));
+
+    if (hasDot) {
+      formattedInteger = formattedInteger === "" ? "0" : formattedInteger;
+      return `${formattedInteger}.${decimalDigits}`;
+    }
+
+    return formattedInteger;
+  }
+
+  function getSafeTargetIndex(remainderTarget) {
+    const target = Number(remainderTarget);
+    return Number.isInteger(target) && target >= 0 && target < PART_COUNT ? target : 0;
+  }
+
+  function normalizeBasisValues(basisValues) {
+    const values = Array.isArray(basisValues) ? basisValues.slice(0, PART_COUNT) : DEFAULT_BASES;
+    while (values.length < PART_COUNT) {
+      values.push(0n);
+    }
+
+    return values.map((value) => {
+      const basis = BigInt(value || 0);
+      return basis > 0n ? basis : 0n;
     });
   }
 
-  function getRemainder(totalAmount) {
-    return BigInt(totalAmount) % PART_COUNT;
+  function sumValues(values) {
+    return values.reduce((sum, value) => sum + value, 0n);
+  }
+
+  function calculateBaseParts(totalAmount, basisValues) {
+    const total = BigInt(totalAmount);
+    const bases = normalizeBasisValues(basisValues);
+    const basisTotal = sumValues(bases);
+
+    if (basisTotal === 0n) {
+      return {
+        parts: ZERO_AMOUNTS.slice(),
+        remainder: 0n,
+        basisTotal
+      };
+    }
+
+    const parts = bases.map((basis) => {
+      return basis === 0n ? 0n : (total * basis) / basisTotal;
+    });
+    const allocated = sumValues(parts);
+
+    return {
+      parts,
+      remainder: total - allocated,
+      basisTotal
+    };
+  }
+
+  function splitAmount(totalAmount, basisValues, remainderTarget) {
+    let bases = basisValues;
+    let target = remainderTarget;
+
+    if (!Array.isArray(bases)) {
+      target = bases;
+      bases = DEFAULT_BASES;
+    }
+
+    const calculated = calculateBaseParts(totalAmount, bases);
+    if (calculated.basisTotal === 0n) {
+      return ZERO_AMOUNTS.slice();
+    }
+
+    const safeTarget = getSafeTargetIndex(target);
+    return calculated.parts.map((amount, index) => {
+      return amount + (index === safeTarget ? calculated.remainder : 0n);
+    });
+  }
+
+  function getRemainder(totalAmount, basisValues) {
+    return calculateBaseParts(totalAmount, basisValues).remainder;
+  }
+
+  function getBasisTotal(basisValues) {
+    return sumValues(normalizeBasisValues(basisValues));
   }
 
   function copyText(text) {
@@ -61,14 +172,49 @@
     }
   }
 
+  function placeCaretAfterDigits(input, digitCount) {
+    if (typeof input.setSelectionRange !== "function") {
+      return;
+    }
+
+    if (digitCount <= 0) {
+      input.setSelectionRange(0, 0);
+      return;
+    }
+
+    let seen = 0;
+    for (let index = 0; index < input.value.length; index += 1) {
+      if (/\d/.test(input.value[index])) {
+        seen += 1;
+      }
+
+      if (seen === digitCount) {
+        input.setSelectionRange(index + 1, index + 1);
+        return;
+      }
+    }
+
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+
+  function formatAmountInputElement(input) {
+    const caret = input.selectionStart || 0;
+    const digitsBeforeCaret = (input.value.slice(0, caret).match(/\d/g) || []).length;
+    input.value = formatAmountInput(input.value);
+    placeCaretAfterDigits(input, digitsBeforeCaret);
+  }
+
   function init(documentRef) {
     const amountInput = documentRef.getElementById("total-amount");
+    const basisInputs = [0, 1, 2].map((index) => documentRef.getElementById(`basis-${index}`));
     const errorText = documentRef.getElementById("amount-error");
+    const basisErrorText = documentRef.getElementById("basis-error");
     const resultOutputs = [0, 1, 2].map((index) => documentRef.getElementById(`result-${index}`));
     const copyButtons = Array.from(documentRef.querySelectorAll("[data-copy-index]"));
     const targetInputs = Array.from(documentRef.querySelectorAll("input[name='remainderTarget']"));
     const splitBars = Array.from(documentRef.querySelectorAll("[data-bar-index]"));
     const summaryTotal = documentRef.getElementById("summary-total");
+    const summaryBasis = documentRef.getElementById("summary-basis");
     const summaryRemainder = documentRef.getElementById("summary-remainder");
     const copyStatus = documentRef.getElementById("copy-status");
     let currentAmounts = ZERO_AMOUNTS;
@@ -78,20 +224,42 @@
       return selected ? Number(selected.value) : 0;
     }
 
+    function getParsedBases() {
+      const parsedBases = basisInputs.map((input) => parseBasis(input.value));
+      return {
+        ok: parsedBases.every((basis) => basis.ok),
+        values: parsedBases.map((basis) => basis.value)
+      };
+    }
+
     function setCopyStatus(message) {
       copyStatus.textContent = message;
     }
 
     function render() {
-      const parsed = parseAmount(amountInput.value);
+      const parsedAmount = parseAmount(amountInput.value);
+      const parsedBases = getParsedBases();
+      const basisTotal = parsedBases.ok ? getBasisTotal(parsedBases.values) : 0n;
       const targetIndex = getTargetIndex();
 
-      if (!parsed.ok) {
-        currentAmounts = ZERO_AMOUNTS;
+      if (!parsedAmount.ok) {
         errorText.textContent = "金額は0以上の整数で入力してください。";
       } else {
-        currentAmounts = splitAmount(parsed.value, targetIndex);
         errorText.textContent = "";
+      }
+
+      if (!parsedBases.ok) {
+        basisErrorText.textContent = "按分基準は小数点2位までの0以上の数値で入力してください。";
+      } else if (basisTotal === 0n) {
+        basisErrorText.textContent = "按分基準を1つ以上入力してください。";
+      } else {
+        basisErrorText.textContent = "";
+      }
+
+      if (parsedAmount.ok && parsedBases.ok && basisTotal > 0n) {
+        currentAmounts = splitAmount(parsedAmount.value, parsedBases.values, targetIndex);
+      } else {
+        currentAmounts = ZERO_AMOUNTS;
       }
 
       resultOutputs.forEach((output, index) => {
@@ -102,25 +270,26 @@
         bar.classList.toggle("is-remainder-target", index === targetIndex);
       });
 
-      const validTotal = parsed.ok ? parsed.value : 0n;
+      const validTotal = parsedAmount.ok ? parsedAmount.value : 0n;
       summaryTotal.textContent = formatAmount(validTotal);
-      summaryRemainder.textContent = formatAmount(parsed.ok ? getRemainder(validTotal) : 0n);
+      summaryBasis.textContent = formatBasisDisplay(basisTotal);
+      summaryRemainder.textContent =
+        parsedAmount.ok && parsedBases.ok && basisTotal > 0n
+          ? formatAmount(getRemainder(validTotal, parsedBases.values))
+          : "0";
       setCopyStatus("");
     }
 
-    amountInput.addEventListener("input", render);
-    amountInput.addEventListener("focus", () => {
-      const parsed = parseAmount(amountInput.value);
-      if (parsed.ok) {
-        amountInput.value = parsed.value === 0n ? "" : parsed.value.toString();
-      }
-    });
-    amountInput.addEventListener("blur", () => {
-      const parsed = parseAmount(amountInput.value);
-      if (parsed.ok && amountInput.value.trim() !== "") {
-        amountInput.value = formatAmount(parsed.value);
-      }
+    amountInput.addEventListener("input", () => {
+      formatAmountInputElement(amountInput);
       render();
+    });
+
+    basisInputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        input.value = formatBasisInput(input.value);
+        render();
+      });
     });
 
     targetInputs.forEach((input) => {
@@ -140,14 +309,23 @@
       });
     });
 
+    amountInput.value = formatAmountInput(amountInput.value);
+    basisInputs.forEach((input) => {
+      input.value = formatBasisInput(input.value);
+    });
     render();
   }
 
   const api = {
     parseAmount,
+    parseBasis,
     formatAmount,
+    formatAmountInput,
+    formatBasisDisplay,
+    formatBasisInput,
     splitAmount,
-    getRemainder
+    getRemainder,
+    getBasisTotal
   };
 
   if (typeof module !== "undefined" && module.exports) {
